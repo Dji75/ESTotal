@@ -1,0 +1,13 @@
+{
+  "name": "poc-websocket-web-api",
+  "version": "1.0.0",
+  "description": "POC et exercice complet sur l'utilisation de la Web API standard WebSocket",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}

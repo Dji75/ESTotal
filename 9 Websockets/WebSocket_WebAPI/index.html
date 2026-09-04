@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Démo & Exercice : Web API WebSocket</title>
+  <style>
+    :root {
+      --bg-primary: #0f172a;
+      --bg-secondary: #1e293b;
+      --bg-card: #1e293b;
+      --bg-terminal: #020617;
+      --accent: #3b82f6;
+      --accent-hover: #2563eb;
+      --accent-success: #10b981;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --border-color: #334155;
+      --error: #ef4444;
+      --warning: #f59e0b;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background-color: var(--bg-primary);
+      color: var(--text-main);
+      padding: 2rem;
+      line-height: 1.6;
+    }
+
+    .container {
+      max-width: 1300px;
+      margin: 0 auto;
+    }
+
+    header {
+      margin-bottom: 2rem;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 1.5rem;
+    }
+
+    h1 {
+      font-size: 2.25rem;
+      font-weight: 800;
+      background: linear-gradient(to right, #60a5fa, #38bdf8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 0.5rem;
+    }
+
+    header p {
+      color: var(--text-muted);
+      font-size: 1.1rem;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 2rem;
+    }
+
+    @media (min-width: 1024px) {
+      .grid {
+        grid-template-columns: 380px 1fr;
+      }
+    }
+
+    .column {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .card {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.5rem;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+    }
+
+    .card-title {
+      font-size: 1.2rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    /* Statut */
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      padding: 0.25rem 0.75rem;
+      border-radius: 9999px;
+      background-color: rgba(239, 68, 68, 0.15);
+      color: var(--error);
+      transition: all 0.3s ease;
+    }
+
+    .status-badge.connected {
+      background-color: rgba(16, 185, 129, 0.15);
+      color: var(--accent-success);
+    }
+
+    .status-badge.connecting {
+      background-color: rgba(245, 158, 11, 0.15);
+      color: var(--warning);
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: currentColor;
+    }
+
+    /* Formulaires et Boutons */
+    .form-group {
+      margin-bottom: 1.25rem;
+    }
+
+    label {
+      display: block;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      margin-bottom: 0.5rem;
+    }
+
+    input[type="text"], select {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      background-color: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      color: var(--text-main);
+      font-size: 1rem;
+      transition: border-color 0.2s;
+    }
+
+    input[type="text"]:focus, select:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      padding: 0.75rem 1.25rem;
+      font-size: 0.95rem;
+      font-weight: 600;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      transition: background-color 0.2s, transform 0.1s;
+    }
+
+    .btn-primary {
+      background-color: var(--accent);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background-color: var(--accent-hover);
+    }
+
+    .btn-secondary {
+      background-color: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+    }
+
+    .btn-secondary:hover {
+      background-color: var(--border-color);
+    }
+
+    .btn:active {
+      transform: scale(0.98);
+    }
+
+    .btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .button-group {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+    }
+
+    /* Layout Tableau de Bord de communication */
+    .workspace {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1.5rem;
+    }
+
+    @media (min-width: 1200px) {
+      .workspace {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    /* Tableau Blanc Interactif (Canvas) */
+    .canvas-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    canvas {
+      background-color: #020617;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      cursor: crosshair;
+      width: 100%;
+      max-width: 500px;
+      height: 300px;
+      touch-action: none;
+    }
+
+    /* Console Terminal */
+    .terminal-container {
+      display: flex;
+      flex-direction: column;
+      height: 400px;
+      background-color: var(--bg-terminal);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .terminal-header {
+      background-color: var(--bg-secondary);
+      border-bottom: 1px solid var(--border-color);
+      padding: 0.75rem 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .terminal-dots {
+      display: flex;
+      gap: 6px;
+    }
+
+    .terminal-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+    .terminal-dot.red { background-color: #ef4444; }
+    .terminal-dot.yellow { background-color: #f59e0b; }
+    .terminal-dot.green { background-color: #10b981; }
+
+    .terminal-title {
+      font-family: monospace;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .terminal-body {
+      flex: 1;
+      padding: 1rem;
+      overflow-y: auto;
+      font-family: 'Fira Code', Consolas, monospace;
+      font-size: 0.85rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+
+    .log-line {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .log-meta {
+      display: flex;
+      gap: 0.5rem;
+      font-size: 0.75rem;
+      margin-bottom: 0.1rem;
+    }
+
+    .log-time { color: #475569; }
+    .log-tag {
+      font-weight: bold;
+      padding: 0 4px;
+      border-radius: 3px;
+    }
+    .log-tag.info { background: rgba(59, 130, 246, 0.15); color: #60a5fa; }
+    .log-tag.sent { background: rgba(16, 185, 129, 0.15); color: #34d399; }
+    .log-tag.recv { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
+    .log-tag.err { background: rgba(239, 68, 68, 0.15); color: #f87171; }
+
+    .log-msg { word-break: break-all; }
+
+    /* Propriétés de la Web API */
+    .properties-list {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.5rem;
+      font-family: monospace;
+      font-size: 0.85rem;
+      margin-top: 1rem;
+      padding-top: 1rem;
+      border-top: 1px dashed var(--border-color);
+    }
+
+    .prop-name { color: var(--text-muted); }
+    .prop-val { text-align: right; font-weight: bold; color: #38bdf8; }
+
+    .info-box {
+      background-color: rgba(59, 130, 246, 0.05);
+      border: 1px dashed rgba(59, 130, 246, 0.3);
+      padding: 1rem;
+      border-radius: 8px;
+      font-size: 0.85rem;
+    }
+
+    .info-box h4 {
+      color: #60a5fa;
+      margin-bottom: 0.5rem;
+    }
+
+    .info-box ul {
+      margin-left: 1.25rem;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <header>
+      <h1>Web API WebSocket Standard</h1>
+      <p>Étude des cycles de vie, événements, reconnexions automatiques et données binaires.</p>
+    </header>
+
+    <div class="grid">
+      <!-- PANNEAU DE CONTRÔLE ET ÉTATS (COLONNE GAUCHE) -->
+      <aside class="column">
+        
+        <!-- Section Connexion -->
+        <section class="card">
+          <h2 class="card-title">
+            🔌 Gestion de Session
+            <span id="conn-badge" class="status-badge">
+              <span class="status-dot"></span>
+              <span id="conn-text">Déconnecté</span>
+            </span>
+          </h2>
+
+          <div class="button-group">
+            <button id="btn-connect" class="btn btn-primary" onclick="triggerConnect()">Se connecter</button>
+            <button id="btn-disconnect" class="btn btn-secondary" onclick="triggerDisconnect()" disabled>Se déconnecter</button>
+          </div>
+
+          <!-- Propriétés en direct de la Web API WebSocket -->
+          <div class="properties-list">
+            <span class="prop-name">ws.readyState</span>
+            <span id="ws-ready-state" class="prop-val">CLOSED (3)</span>
+
+            <span class="prop-name">ws.binaryType</span>
+            <span id="ws-binary-type" class="prop-val">arraybuffer</span>
+          </div>
+        </section>
+
+        <!-- Configuration Salons (Exercice 2) -->
+        <section class="card">
+          <h2 class="card-title">🏢 Salon thématique</h2>
+          <div class="form-group">
+            <label for="room-select">Sélectionnez votre salon</label>
+            <select id="room-select" onchange="onRoomChanged()" disabled>
+              <option value="Général">Salon Général (Broadcast)</option>
+              <option value="JavaScript">Salon Spécialisé - JavaScript 💻</option>
+              <option value="WebSockets">Salon Spécialisé - WebSockets ⚡</option>
+            </select>
+          </div>
+          <p style="font-size: 0.8rem; color: var(--text-muted);">
+            <em>L'exercice 2 requiert l'envoi d'une action JSON <code>"join"</code> lors d'un changement de salon.</em>
+          </p>
+        </section>
+
+        <!-- Rappel des exercices -->
+        <section class="info-box">
+          <h4>🎯 Travaux Pratiques</h4>
+          <ul style="display: flex; flex-direction: column; gap: 0.4rem;">
+            <li><strong>Ex 1 :</strong> Codez la reconnexion automatique avec délai progressif (Exponential Backoff) dans <code>onclose</code>.</li>
+            <li><strong>Ex 2 :</strong> Manipulez des objets JSON structurés pour changer de salon et discuter uniquement avec ses membres.</li>
+            <li><strong>Ex 3 :</strong> Observez le Heartbeat serveur (il envoie des pings invisibles toutes les 30s et le navigateur y répond seul).</li>
+            <li><strong>Ex 4 :</strong> Dessinez sur le tableau blanc de droite : les mouvements sont envoyés et partagés sous forme de trames binaires.</li>
+          </ul>
+        </section>
+
+      </aside>
+
+      <!-- TRAVAUX PRATIQUES ET CONSOLE (COLONNE DROITE) -->
+      <main class="column">
+        
+        <div class="workspace">
+          <!-- Chat Card -->
+          <section class="card" style="display: flex; flex-direction: column; justify-content: space-between;">
+            <div>
+              <h2 class="card-title">💬 Espace de messagerie (JSON)</h2>
+              <form id="chat-form" onsubmit="sendChatMessage(event)">
+                <div class="form-group">
+                  <label for="chat-input">Message à envoyer</label>
+                  <input type="text" id="chat-input" placeholder="Saisissez du texte ici..." required disabled>
+                </div>
+                <button type="submit" id="btn-send-chat" class="btn btn-primary" disabled>Envoyer par le réseau</button>
+              </form>
+            </div>
+
+            <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px dashed var(--border-color); font-size: 0.8rem; color: var(--text-muted);">
+              Les messages sont envoyés sous la forme d'un objet JSON encapsulé :<br>
+              <code>{ "action": "message", "payload": { "text": "..." } }</code>
+            </div>
+          </section>
+
+          <!-- Tableau de dessin (Données binaires - Exercice 4) -->
+          <section class="card canvas-container">
+            <h2 class="card-title" style="width: 100%;">🎨 Tableau Collaboratif (Binaire)</h2>
+            <canvas id="paint-canvas" width="500" height="300"></canvas>
+            <div style="display: flex; width: 100%; justify-content: space-between; font-size: 0.8rem; color: var(--text-muted);">
+              <span>Dessinez pour émettre des trames binaires</span>
+              <button class="btn btn-secondary" style="width: auto; padding: 0.2rem 0.5rem; font-size: 0.75rem;" onclick="clearCanvas()">Vider</button>
+            </div>
+          </section>
+        </div>
+
+        <!-- Terminal Débugger de logs de l'API standard -->
+        <section class="terminal-container">
+          <div class="terminal-header">
+            <div class="terminal-dots">
+              <div class="terminal-dot red"></div>
+              <div class="terminal-dot yellow"></div>
+              <div class="terminal-dot green"></div>
+            </div>
+            <span class="terminal-title">web-api-websocket-debugger.log</span>
+            <button class="btn btn-secondary" style="width: auto; padding: 0.25rem 0.5rem; font-size: 0.75rem;" onclick="clearTerminal()">Vider les logs</button>
+          </div>
+          <div id="terminal" class="terminal-body">
+            <!-- Logs asynchrones générés par l'API -->
+          </div>
+        </section>
+
+      </main>
+    </div>
+  </div>
+
+  <script src="client.js" defer></script>
+</body>
+</html>
